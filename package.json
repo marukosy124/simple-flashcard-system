@@ -1,15 +1,14 @@
 {
-  "name": "flash_card",
+  "name": "terminal-flash-card-system",
   "version": "1.0.0",
-  "description": "Description of your project",
-  "main": "dist/index.js",
+  "description": "A simple flash card system for learning English vocabulary on the terminal.",
+  "main": "index.js",
   "scripts": {
     "build": "npx tsc",
     "start": "node build/index.js"
   },
   "keywords": [],
-  "author": "Your Name",
-  "license": "MIT",
+  "author": "marukosy124",
   "devDependencies": {
     "@types/node": "^20.11.30",
     "typescript": "^5.4.3"
