@@ -71,32 +71,48 @@ function saveFlashcardData(cards: FlashCard[]): void {
   fs.writeFileSync(FLASHCARD_DATA_FILE, JSON.stringify(cards, null, 2));
 }
 
-// Function to load flashcard data from a file
-function loadFlashcardData(): FlashCard[] {
-  try {
-    const data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error loading flashcard data:", error);
-    return [];
-  }
+function mergeFlashcards(existingCards: FlashCard[], newCards: FlashCard[]): FlashCard[] {
+  const mergedCardsMap = new Map<string, FlashCard>();
+
+  // Add existing flashcards to the map
+  existingCards.forEach((card) => {
+    mergedCardsMap.set(card.english, card);
+  });
+
+  // Add new flashcards to the map, skipping existing ones
+  newCards.forEach((card) => {
+    if (!mergedCardsMap.has(card.english)) {
+      mergedCardsMap.set(card.english, card);
+    }
+  });
+
+  // Convert map values back to an array
+  return Array.from(mergedCardsMap.values());
 }
 
 // Function to initialize flashcards
 async function initializeFlashcards(filePath: string): Promise<FlashCard[]> {
-  let cards: FlashCard[];
+  let flashCards: FlashCard[] = [];
 
-  // Load flashcard data from file if it exists, otherwise read from CSV
-  if (fs.existsSync(FLASHCARD_DATA_FILE)) {
-    cards = loadFlashcardData();
-  } else {
-    cards = await readCsvFile(filePath);
-    saveFlashcardData(cards); // Save initial flashcard data to file
+  try {
+    // Load existing flashcard data from file if it exists
+    if (fs.existsSync(FLASHCARD_DATA_FILE)) {
+      const data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
+      flashCards = JSON.parse(data);
+    }
+
+    // Read flashcards from CSV and merge them with existing flashcards
+    const newCards = await readCsvFile(filePath);
+    flashCards = mergeFlashcards(flashCards, newCards);
+
+    // Save merged flashcards to file
+    saveFlashcardData(flashCards);
+  } catch (error) {
+    console.error("Error initializing flashcards:", error);
   }
 
-  return cards;
+  return flashCards;
 }
-
 async function displayFlashCards(rl: readline.Interface, cards: FlashCard[], showChineseFirst: boolean): Promise<number[]> {
   const performanceRatings: number[] = [];
   let remainingCards = cards.filter((c) => c.nextReviewDate <= new Date()).length;
@@ -108,18 +124,17 @@ async function displayFlashCards(rl: readline.Interface, cards: FlashCard[], sho
     const answerSide = showChineseFirst ? "English" : "Chinese";
     const prompt = `Type the corresponding ${answerSide} for: ${contentToDisplay}: `;
 
-    console.log(contentToDisplay);
     const userAnswer = await askQuestion(rl, prompt);
     const performanceRating = evaluatePerformance(card, userAnswer, !showChineseFirst);
     updateSM2(card, performanceRating);
 
     const correctContent = showChineseFirst ? card.english : card.chinese;
-    console.log(`Your answer: ${userAnswer}`);
-    console.log(`Correct answer: ${correctContent}`);
+    console.log(userAnswer === correctContent ? "Correct!" : `Wrong! Correct answer: ${correctContent}`);
 
     performanceRatings.push(performanceRating);
     remainingCards--;
     console.log(`Remaining cards for review today: ${remainingCards}`);
+    console.log("-------------------------------------------------");
   }
 
   return performanceRatings;

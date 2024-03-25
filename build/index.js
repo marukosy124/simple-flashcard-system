@@ -123,33 +123,49 @@ function readCsvFile(filePath) {
 function saveFlashcardData(cards) {
     fs.writeFileSync(FLASHCARD_DATA_FILE, JSON.stringify(cards, null, 2));
 }
-// Function to load flashcard data from a file
-function loadFlashcardData() {
-    try {
-        var data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
-        return JSON.parse(data);
-    }
-    catch (error) {
-        console.error("Error loading flashcard data:", error);
-        return [];
-    }
+function mergeFlashcards(existingCards, newCards) {
+    var mergedCardsMap = new Map();
+    // Add existing flashcards to the map
+    existingCards.forEach(function (card) {
+        mergedCardsMap.set(card.english, card);
+    });
+    // Add new flashcards to the map, skipping existing ones
+    newCards.forEach(function (card) {
+        if (!mergedCardsMap.has(card.english)) {
+            mergedCardsMap.set(card.english, card);
+        }
+    });
+    // Convert map values back to an array
+    return Array.from(mergedCardsMap.values());
 }
 // Function to initialize flashcards
 function initializeFlashcards(filePath) {
     return __awaiter(this, void 0, void 0, function () {
-        var cards;
+        var flashCards, data, newCards, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!fs.existsSync(FLASHCARD_DATA_FILE)) return [3 /*break*/, 1];
-                    cards = loadFlashcardData();
-                    return [3 /*break*/, 3];
-                case 1: return [4 /*yield*/, readCsvFile(filePath)];
+                    flashCards = [];
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    // Load existing flashcard data from file if it exists
+                    if (fs.existsSync(FLASHCARD_DATA_FILE)) {
+                        data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
+                        flashCards = JSON.parse(data);
+                    }
+                    return [4 /*yield*/, readCsvFile(filePath)];
                 case 2:
-                    cards = _a.sent();
-                    saveFlashcardData(cards); // Save initial flashcard data to file
-                    _a.label = 3;
-                case 3: return [2 /*return*/, cards];
+                    newCards = _a.sent();
+                    flashCards = mergeFlashcards(flashCards, newCards);
+                    // Save merged flashcards to file
+                    saveFlashcardData(flashCards);
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_1 = _a.sent();
+                    console.error("Error initializing flashcards:", error_1);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/, flashCards];
             }
         });
     });
@@ -172,18 +188,17 @@ function displayFlashCards(rl, cards, showChineseFirst) {
                     contentToDisplay = showChineseFirst ? card.chinese : card.english;
                     answerSide = showChineseFirst ? "English" : "Chinese";
                     prompt_1 = "Type the corresponding ".concat(answerSide, " for: ").concat(contentToDisplay, ": ");
-                    console.log(contentToDisplay);
                     return [4 /*yield*/, askQuestion(rl, prompt_1)];
                 case 2:
                     userAnswer = _b.sent();
                     performanceRating = evaluatePerformance(card, userAnswer, !showChineseFirst);
                     updateSM2(card, performanceRating);
                     correctContent = showChineseFirst ? card.english : card.chinese;
-                    console.log("Your answer: ".concat(userAnswer));
-                    console.log("Correct answer: ".concat(correctContent));
+                    console.log(userAnswer === correctContent ? "Correct!" : "Wrong! Correct answer: ".concat(correctContent));
                     performanceRatings.push(performanceRating);
                     remainingCards--;
                     console.log("Remaining cards for review today: ".concat(remainingCards));
+                    console.log("-------------------------------------------------");
                     _b.label = 3;
                 case 3:
                     _i++;
@@ -196,7 +211,7 @@ function displayFlashCards(rl, cards, showChineseFirst) {
 // Function to handle the flashcard review process
 function handleFlashcardReview(filePath) {
     return __awaiter(this, void 0, void 0, function () {
-        var cards_1, rl_1, error_1;
+        var cards_1, rl_1, error_2;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -226,8 +241,8 @@ function handleFlashcardReview(filePath) {
                     }); });
                     return [3 /*break*/, 3];
                 case 2:
-                    error_1 = _a.sent();
-                    console.error("An error occurred:", error_1);
+                    error_2 = _a.sent();
+                    console.error("An error occurred:", error_2);
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
