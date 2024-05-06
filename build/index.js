@@ -172,34 +172,35 @@ function initializeFlashcards(filePath) {
 }
 function displayFlashCards(rl, cards, showChineseFirst) {
     return __awaiter(this, void 0, void 0, function () {
-        var performanceRatings, remainingCards, _i, _a, card, contentToDisplay, answerSide, prompt_1, userAnswer, performanceRating, correctContent;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var performanceRatings, remainingCards, remainingCardsLength, _i, remainingCards_1, card, contentToDisplay, answerSide, prompt_1, userAnswer, performanceRating, correctContent;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
                     performanceRatings = [];
-                    remainingCards = cards.filter(function (c) { return c.nextReviewDate <= new Date(); }).length;
-                    if (remainingCards === 0)
+                    remainingCards = cards.filter(function (c) { return new Date(c.nextReviewDate) <= new Date(); });
+                    remainingCardsLength = remainingCards.length;
+                    if (remainingCardsLength === 0)
                         console.log("All cards have been reviewed today! See you tomorrow!");
-                    _i = 0, _a = cards.filter(function (c) { return c.nextReviewDate <= new Date(); });
-                    _b.label = 1;
+                    _i = 0, remainingCards_1 = remainingCards;
+                    _a.label = 1;
                 case 1:
-                    if (!(_i < _a.length)) return [3 /*break*/, 4];
-                    card = _a[_i];
+                    if (!(_i < remainingCards_1.length)) return [3 /*break*/, 4];
+                    card = remainingCards_1[_i];
                     contentToDisplay = showChineseFirst ? card.chinese : card.english;
                     answerSide = showChineseFirst ? "English" : "Chinese";
                     prompt_1 = "Type the corresponding ".concat(answerSide, " for: ").concat(contentToDisplay, ": ");
                     return [4 /*yield*/, askQuestion(rl, prompt_1)];
                 case 2:
-                    userAnswer = _b.sent();
+                    userAnswer = _a.sent();
                     performanceRating = evaluatePerformance(card, userAnswer, !showChineseFirst);
                     updateSM2(card, performanceRating);
                     correctContent = showChineseFirst ? card.english : card.chinese;
                     console.log(userAnswer === correctContent ? "Correct!" : "Wrong! Correct answer: ".concat(correctContent));
                     performanceRatings.push(performanceRating);
-                    remainingCards--;
-                    console.log("Remaining cards for review today: ".concat(remainingCards));
+                    remainingCardsLength--;
+                    console.log("Remaining cards for review today: ".concat(remainingCardsLength));
                     console.log("-------------------------------------------------");
-                    _b.label = 3;
+                    _a.label = 3;
                 case 3:
                     _i++;
                     return [3 /*break*/, 1];

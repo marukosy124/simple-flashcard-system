@@ -115,11 +115,12 @@ async function initializeFlashcards(filePath: string): Promise<FlashCard[]> {
 }
 async function displayFlashCards(rl: readline.Interface, cards: FlashCard[], showChineseFirst: boolean): Promise<number[]> {
   const performanceRatings: number[] = [];
-  let remainingCards = cards.filter((c) => c.nextReviewDate <= new Date()).length;
+  let remainingCards = cards.filter((c) => new Date(c.nextReviewDate) <= new Date());
+  let remainingCardsLength = remainingCards.length;
 
-  if (remainingCards === 0) console.log("All cards have been reviewed today! See you tomorrow!");
+  if (remainingCardsLength === 0) console.log("All cards have been reviewed today! See you tomorrow!");
 
-  for (const card of cards.filter((c) => c.nextReviewDate <= new Date())) {
+  for (const card of remainingCards) {
     const contentToDisplay = showChineseFirst ? card.chinese : card.english;
     const answerSide = showChineseFirst ? "English" : "Chinese";
     const prompt = `Type the corresponding ${answerSide} for: ${contentToDisplay}: `;
@@ -132,8 +133,8 @@ async function displayFlashCards(rl: readline.Interface, cards: FlashCard[], sho
     console.log(userAnswer === correctContent ? "Correct!" : `Wrong! Correct answer: ${correctContent}`);
 
     performanceRatings.push(performanceRating);
-    remainingCards--;
-    console.log(`Remaining cards for review today: ${remainingCards}`);
+    remainingCardsLength--;
+    console.log(`Remaining cards for review today: ${remainingCardsLength}`);
     console.log("-------------------------------------------------");
   }
 
