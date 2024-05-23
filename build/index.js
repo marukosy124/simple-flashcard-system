@@ -78,8 +78,16 @@ var csv_parser_1 = __importDefault(require("csv-parser"));
 var readline = __importStar(require("readline"));
 var FLASHCARD_DATA_FILE = "flashcards.json";
 var flashCards = [];
+var shuffleArray = function (array) {
+    var _a;
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        _a = [array[j], array[i]], array[i] = _a[0], array[j] = _a[1];
+    }
+    return array;
+};
 // Function to apply the SM-2 algorithm to a flashcard
-function updateSM2(flashCard, performanceRating) {
+var updateSM2 = function (flashCard, performanceRating) {
     if (performanceRating < 3) {
         flashCard.repetition = 0;
         flashCard.interval = 1;
@@ -101,29 +109,31 @@ function updateSM2(flashCard, performanceRating) {
         }
     }
     flashCard.nextReviewDate = new Date(Date.now() + flashCard.interval * 24 * 60 * 60 * 1000);
+    flashCard.performanceRating = performanceRating;
     return flashCard;
-}
+};
 // Function to read the CSV file and convert to flashcards
-function readCsvFile(filePath) {
+var readCsvFile = function (filePath) {
+    var newCards = [];
     return new Promise(function (resolve, reject) {
         fs.createReadStream(filePath)
             .pipe((0, csv_parser_1.default)(["english", "chinese"]))
             .on("data", function (data) {
-            flashCards.push(__assign(__assign({}, data), { repetition: 0, interval: 1, EF: 2.5, nextReviewDate: new Date() }));
+            newCards.push(__assign(__assign({}, data), { repetition: 0, interval: 1, EF: 2.5, nextReviewDate: new Date() }));
         })
             .on("end", function () {
-            resolve(flashCards);
+            resolve(newCards);
         })
             .on("error", function (error) {
             reject(error);
         });
     });
-}
+};
 // Function to save flashcard data to a file
-function saveFlashcardData(cards) {
+var saveFlashcardData = function (cards) {
     fs.writeFileSync(FLASHCARD_DATA_FILE, JSON.stringify(cards, null, 2));
-}
-function mergeFlashcards(existingCards, newCards) {
+};
+var mergeFlashcards = function (existingCards, newCards) {
     var mergedCardsMap = new Map();
     // Add existing flashcards to the map
     existingCards.forEach(function (card) {
@@ -137,134 +147,130 @@ function mergeFlashcards(existingCards, newCards) {
     });
     // Convert map values back to an array
     return Array.from(mergedCardsMap.values());
-}
+};
 // Function to initialize flashcards
-function initializeFlashcards(filePath) {
-    return __awaiter(this, void 0, void 0, function () {
-        var flashCards, data, newCards, error_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    flashCards = [];
-                    _a.label = 1;
-                case 1:
-                    _a.trys.push([1, 3, , 4]);
-                    // Load existing flashcard data from file if it exists
-                    if (fs.existsSync(FLASHCARD_DATA_FILE)) {
-                        data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
-                        flashCards = JSON.parse(data);
-                    }
-                    return [4 /*yield*/, readCsvFile(filePath)];
-                case 2:
-                    newCards = _a.sent();
-                    flashCards = mergeFlashcards(flashCards, newCards);
-                    // Save merged flashcards to file
-                    saveFlashcardData(flashCards);
-                    return [3 /*break*/, 4];
-                case 3:
-                    error_1 = _a.sent();
-                    console.error("Error initializing flashcards:", error_1);
-                    return [3 /*break*/, 4];
-                case 4: return [2 /*return*/, flashCards];
-            }
-        });
+var initializeFlashcards = function (filePath) { return __awaiter(void 0, void 0, void 0, function () {
+    var flashCards, data, newCards, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                flashCards = [];
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 3, , 4]);
+                // Load existing flashcard data from file if it exists
+                if (fs.existsSync(FLASHCARD_DATA_FILE)) {
+                    data = fs.readFileSync(FLASHCARD_DATA_FILE, "utf-8");
+                    flashCards = JSON.parse(data);
+                }
+                return [4 /*yield*/, readCsvFile(filePath)];
+            case 2:
+                newCards = _a.sent();
+                flashCards = mergeFlashcards(flashCards, newCards);
+                return [3 /*break*/, 4];
+            case 3:
+                error_1 = _a.sent();
+                console.error("Error initializing flashcards:", error_1);
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/, flashCards];
+        }
     });
-}
-function displayFlashCards(rl, cards, showChineseFirst) {
-    return __awaiter(this, void 0, void 0, function () {
-        var performanceRatings, remainingCards, remainingCardsLength, _i, remainingCards_1, card, contentToDisplay, answerSide, prompt_1, userAnswer, performanceRating, correctContent;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    performanceRatings = [];
-                    remainingCards = cards.filter(function (c) { return new Date(c.nextReviewDate) <= new Date(); });
-                    remainingCardsLength = remainingCards.length;
-                    if (remainingCardsLength === 0)
-                        console.log("All cards have been reviewed today! See you tomorrow!");
-                    _i = 0, remainingCards_1 = remainingCards;
-                    _a.label = 1;
-                case 1:
-                    if (!(_i < remainingCards_1.length)) return [3 /*break*/, 4];
-                    card = remainingCards_1[_i];
-                    contentToDisplay = showChineseFirst ? card.chinese : card.english;
-                    answerSide = showChineseFirst ? "English" : "Chinese";
-                    prompt_1 = "Type the corresponding ".concat(answerSide, " for: ").concat(contentToDisplay, ": ");
-                    return [4 /*yield*/, askQuestion(rl, prompt_1)];
-                case 2:
-                    userAnswer = _a.sent();
-                    performanceRating = evaluatePerformance(card, userAnswer, !showChineseFirst);
-                    updateSM2(card, performanceRating);
-                    correctContent = showChineseFirst ? card.english : card.chinese;
-                    console.log(userAnswer === correctContent ? "Correct!" : "Wrong! Correct answer: ".concat(correctContent));
-                    performanceRatings.push(performanceRating);
-                    remainingCardsLength--;
-                    console.log("Remaining cards for review today: ".concat(remainingCardsLength));
-                    console.log("-------------------------------------------------");
-                    _a.label = 3;
-                case 3:
-                    _i++;
-                    return [3 /*break*/, 1];
-                case 4: return [2 /*return*/, performanceRatings];
-            }
-        });
+}); };
+var displayFlashCards = function (rl, showChineseFirst) { return __awaiter(void 0, void 0, void 0, function () {
+    var performanceRatings, remainingCards, remainingCardsLength, _i, remainingCards_1, card, contentToDisplay, answerSide, prompt_1, userAnswer, performanceRating, correctContent;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                performanceRatings = [];
+                remainingCards = flashCards.filter(function (c) { return new Date(c.nextReviewDate) <= new Date(); });
+                remainingCardsLength = remainingCards.length;
+                if (remainingCardsLength === 0)
+                    console.log("All cards have been reviewed today! See you tomorrow!");
+                remainingCards = shuffleArray(remainingCards);
+                _i = 0, remainingCards_1 = remainingCards;
+                _a.label = 1;
+            case 1:
+                if (!(_i < remainingCards_1.length)) return [3 /*break*/, 4];
+                card = remainingCards_1[_i];
+                contentToDisplay = showChineseFirst ? card.chinese : card.english;
+                answerSide = showChineseFirst ? "English" : "Chinese";
+                prompt_1 = "Type the corresponding ".concat(answerSide, " for: ").concat(contentToDisplay, ": ");
+                return [4 /*yield*/, askQuestion(rl, prompt_1)];
+            case 2:
+                userAnswer = _a.sent();
+                performanceRating = evaluatePerformance(card, userAnswer, !showChineseFirst);
+                updateSM2(card, performanceRating);
+                correctContent = showChineseFirst ? card.english : card.chinese;
+                console.log(userAnswer === correctContent ? "Correct!" : "Wrong! Correct answer: ".concat(correctContent));
+                performanceRatings.push(performanceRating);
+                remainingCardsLength--;
+                console.log("Remaining cards for review today: ".concat(remainingCardsLength));
+                console.log("-------------------------------------------------");
+                _a.label = 3;
+            case 3:
+                _i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/, performanceRatings];
+        }
     });
-}
+}); };
 // Function to handle the flashcard review process
-function handleFlashcardReview(filePath) {
-    return __awaiter(this, void 0, void 0, function () {
-        var cards_1, rl_1, error_2;
-        var _this = this;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, initializeFlashcards(filePath)];
-                case 1:
-                    cards_1 = _a.sent();
-                    rl_1 = readline.createInterface({
-                        input: process.stdin,
-                        output: process.stdout,
+var handleFlashcardReview = function (filePath) { return __awaiter(void 0, void 0, void 0, function () {
+    var rl_1, error_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, initializeFlashcards(filePath)];
+            case 1:
+                flashCards = _a.sent();
+                rl_1 = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+                rl_1.question("Would you like to see Chinese first? (default yes; press Enter to continue): ", function (answer) { return __awaiter(void 0, void 0, void 0, function () {
+                    var showChineseFirst, performanceRatings;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                showChineseFirst = answer.trim().toLowerCase() !== "no";
+                                return [4 /*yield*/, displayFlashCards(rl_1, showChineseFirst)];
+                            case 1:
+                                performanceRatings = _a.sent();
+                                saveFlashcardData(flashCards); // Save flashcard data after review
+                                rl_1.close();
+                                return [2 /*return*/];
+                        }
                     });
-                    rl_1.question("Would you like to see Chinese first? (default yes; press Enter to continue): ", function (answer) { return __awaiter(_this, void 0, void 0, function () {
-                        var showChineseFirst, performanceRatings;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    showChineseFirst = answer.trim().toLowerCase() !== "no";
-                                    return [4 /*yield*/, displayFlashCards(rl_1, cards_1, showChineseFirst)];
-                                case 1:
-                                    performanceRatings = _a.sent();
-                                    saveFlashcardData(cards_1); // Save flashcard data after review
-                                    rl_1.close();
-                                    return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    return [3 /*break*/, 3];
-                case 2:
-                    error_2 = _a.sent();
-                    console.error("An error occurred:", error_2);
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/];
-            }
-        });
+                }); });
+                return [3 /*break*/, 3];
+            case 2:
+                error_2 = _a.sent();
+                console.error("An error occurred:", error_2);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
     });
-}
-function askQuestion(rl, question) {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            return [2 /*return*/, new Promise(function (resolve) {
-                    rl.question(question, function (answer) {
-                        resolve(answer); // Trim the answer to remove leading and trailing whitespace
-                    });
-                })];
-        });
+}); };
+var askQuestion = function (rl, question) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        return [2 /*return*/, new Promise(function (resolve) {
+                rl.question(question, function (answer) {
+                    resolve(answer); // Trim the answer to remove leading and trailing whitespace
+                });
+            })];
     });
-}
-function evaluatePerformance(card, userAnswer, showChineseFirst) {
+}); };
+var evaluatePerformance = function (card, userAnswer, showChineseFirst) {
     var correctContent = showChineseFirst ? card.chinese : card.english;
     var isCorrect = userAnswer.trim().toLowerCase() === correctContent.trim().toLowerCase();
     // Assign performance rating based on correctness
     return isCorrect ? 5 : 0; // For simplicity, you can use a binary rating (correct or incorrect)
-}
+};
+var handleExit = function () {
+    console.log("\n-------------------------------------------------");
+    console.log("Saving flashcard data before exiting...");
+    saveFlashcardData(flashCards);
+};
+process.on("beforeExit", handleExit);
 handleFlashcardReview("vocab.csv");
